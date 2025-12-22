@@ -1,0 +1,6 @@
+customtkinter
+yt-dlp
+requests
+Pillow
+qrcode
+tkcalendar
