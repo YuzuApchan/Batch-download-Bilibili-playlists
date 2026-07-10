@@ -789,9 +789,14 @@ h2 {
 }
 
 .inspector {
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 14px;
+}
+
+.inspector .panel {
+  flex: 0 0 auto;
+  margin-bottom: 0;
 }
 
 .chart-head {
@@ -818,6 +823,16 @@ h2 {
   gap: 8px;
   height: 190px;
   padding-top: 26px;
+}
+
+.month-chart .empty {
+  grid-column: 1 / -1;
+  align-self: center;
+  justify-self: center;
+  margin: 0;
+  max-width: 220px;
+  line-height: 1.6;
+  white-space: normal;
 }
 
 .month-bar {
@@ -915,8 +930,9 @@ h2 {
 }
 
 #logs {
-  height: calc(100vh - 520px);
-  min-height: 260px;
+  height: 260px;
+  max-height: 42vh;
+  min-height: 180px;
   overflow: auto;
   color: #cad4e6;
   font-family: Consolas, monospace;
