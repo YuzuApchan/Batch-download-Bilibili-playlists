@@ -1,0 +1,36 @@
+# --- 用户数据 (绝对不能传) ---
+userdata/
+eagle_exports/
+eagle_integration/exports/
+*.library/
+last_login_cookie.json
+bili_netscape_temp.txt
+error_log.txt
+*.json
+*.txt
+!requirements.txt
+!README.md
+
+# --- 外部工具 (太大了不传) ---
+ffmpeg.exe
+ffprobe.exe
+aria2c.exe
+*.exe
+
+# --- Python 系统缓存 ---
+__pycache__/
+*.pyc
+*.pyo
+build/
+dist/
+*.spec
+.pytest_cache/
+
+# --- 编辑器配置 ---
+.idea/
+.vscode/
+
+# --- 本地助手/备份文件 ---
+.claude/
+source_backup_*/
+*_before_*.py

@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BiliDownloader Studio</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="rail glass">
+        <div class="brand">
+          <div class="brand-mark">B</div>
+          <div>
+            <h1>BiliDownloader</h1>
+            <p>收藏夹下载工作台</p>
+          </div>
+        </div>
+
+        <section class="panel account">
+          <div class="eyebrow">账号</div>
+          <div id="userName" class="account-name">未登录</div>
+          <div id="envLine" class="muted">检测组件中...</div>
+          <div class="row gap">
+            <button id="loginBtn" class="btn primary">扫码登录</button>
+            <button id="logoutBtn" class="btn ghost">退出</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="eyebrow">数据源</div>
+          <div id="favDropdown" class="dropdown">
+            <button id="favDropdownBtn" class="dropdown-btn" type="button">
+              <span id="favDropdownLabel">请选择收藏夹</span>
+              <span class="chevron">⌄</span>
+            </button>
+            <div id="favDropdownMenu" class="dropdown-menu hidden"></div>
+          </div>
+          <div class="progress slim"><span id="syncProgress"></span></div>
+          <button id="syncBtn" class="btn primary full">同步收藏夹</button>
+          <button id="importFavBtn" class="btn ghost full">导入外部收藏夹</button>
+          <button id="seasonBtn" class="btn ghost full">导入视频合集</button>
+          <button id="extractBtn" class="btn ghost full">提取视频/特殊链接</button>
+          <div class="action-row">
+            <button id="importHistoryBtn" class="btn ghost">导入记录</button>
+            <button id="exportHistoryBtn" class="btn ghost">导出记录</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="eyebrow">筛选</div>
+          <select id="durationFilter" class="select">
+            <option>全部时长</option>
+            <option>&lt;1分钟</option>
+            <option>1-3分钟</option>
+            <option>3-5分钟</option>
+            <option>5-10分钟</option>
+            <option>&gt;10分钟</option>
+          </select>
+          <label class="toggle"><input id="undoneOnly" type="checkbox" /> 仅看未下载</label>
+          <label class="toggle"><input id="groupByMonth" type="checkbox" checked /> 按月份分组</label>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="top glass">
+          <div>
+            <div class="eyebrow">本地 Web UI</div>
+            <h2>收藏夹下载与 Eagle 封面管理</h2>
+          </div>
+          <div class="search">
+            <input id="searchInput" placeholder="搜索标题 / BV 号" />
+          </div>
+          <div class="segmented">
+            <button id="modeFav" class="active">收藏夹</button>
+            <button id="modeManual">手动</button>
+          </div>
+        </header>
+
+        <section class="metrics">
+          <div class="metric card"><span>当前列表</span><strong id="metricTotal">0</strong></div>
+          <div class="metric card"><span>已下载</span><strong id="metricDone">0</strong></div>
+          <div class="metric card"><span>已选择</span><strong id="metricSelected">0</strong></div>
+          <div class="metric card"><span>同步状态</span><strong id="metricSync">Idle</strong></div>
+        </section>
+
+        <section class="toolbar card">
+          <button id="selectAllBtn" class="btn ghost">全选</button>
+          <button id="clearSelectBtn" class="btn ghost">取消选择</button>
+          <button id="markDoneBtn" class="btn ghost">标为已下</button>
+          <button id="markUndoneBtn" class="btn ghost">标为未下</button>
+          <button id="deleteBtn" class="btn danger">删除已选</button>
+          <div class="pager">
+            <button id="prevPage" class="btn ghost">‹</button>
+            <span id="pageInfo">Page 1 / 1</span>
+            <button id="nextPage" class="btn ghost">›</button>
+          </div>
+        </section>
+
+        <section id="videoList" class="video-list"></section>
+      </main>
+
+      <aside class="inspector glass">
+        <section class="panel chart-panel">
+          <div class="chart-head">
+            <div>
+              <div class="eyebrow">数据概览</div>
+              <div id="chartTitle" class="chart-title">月份分布</div>
+            </div>
+            <select id="yearSelect" class="select compact"></select>
+          </div>
+          <div id="monthChart" class="month-chart"></div>
+        </section>
+
+        <section class="panel download-panel">
+          <div class="eyebrow">下载</div>
+          <input id="saveDir" class="input" placeholder="保存目录" />
+          <button id="chooseDirBtn" class="btn ghost full">选择下载目录</button>
+          <div class="grid2">
+            <select id="quality" class="select">
+              <option>1080</option>
+              <option>720</option>
+              <option>480</option>
+              <option>2K</option>
+              <option>4K</option>
+            </select>
+            <input id="speed" class="input" placeholder="限速 KB/s，可空" />
+          </div>
+          <label class="toggle"><input id="audioOnly" type="checkbox" /> 仅下载音频</label>
+          <label class="toggle"><input id="allParts" type="checkbox" /> 下载所有分 P</label>
+          <button id="startBtn" class="btn primary full">启动下载</button>
+          <div class="row gap">
+            <button id="pauseBtn" class="btn ghost">暂停/继续</button>
+            <button id="cancelBtn" class="btn danger">停止</button>
+          </div>
+          <div class="download-status">
+            <div id="downloadTitle">等待任务</div>
+            <div class="progress"><span id="totalProgress"></span></div>
+            <div id="downloadStatus" class="muted">Ready</div>
+            <div class="progress thin"><span id="fileProgress"></span></div>
+          </div>
+        </section>
+
+        <section class="panel eagle-box">
+          <div class="eyebrow">Eagle</div>
+          <input id="eagleLibrary" class="input" placeholder="Eagle .library 目录" />
+          <button id="chooseEagleBtn" class="btn ghost full">选择 Eagle 库</button>
+          <button id="refreshEagleIndexBtn" class="btn ghost full">刷新 Eagle 索引</button>
+          <select id="eagleFolder" class="select eagle-folder-select">
+            <option value="">导入到 Eagle 默认位置</option>
+          </select>
+          <label class="toggle"><input id="deleteAfterEagle" type="checkbox" checked /> 导入后删除源视频</label>
+          <label class="toggle"><input id="useDanmakuEagle" type="checkbox" checked /> 使用弹幕峰值抽帧</label>
+          <select id="eagleSpeedMode" class="select eagle-folder-select">
+            <option value="快速">快速</option>
+            <option value="平衡" selected>平衡</option>
+            <option value="高质量">高质量</option>
+          </select>
+          <label class="toggle"><input id="forceEagleRebuild" type="checkbox" /> 强制刷新已生成封面</label>
+          <button id="eagleImportBtn" class="btn primary full">导入已下载视频到 Eagle</button>
+          <button id="eagleFolderThumbBtn" class="btn ghost full">修复选中文件夹封面</button>
+          <div class="action-row">
+            <button id="eaglePauseBtn" class="btn ghost">暂停</button>
+            <button id="eagleCancelBtn" class="btn ghost">取消</button>
+          </div>
+          <button id="openEagleBatchBtn" class="btn ghost full">打开 Eagle 批处理器</button>
+          <div class="download-status eagle-status">
+            <div id="eagleTaskTitle">等待导入</div>
+            <div class="eagle-progress-head">
+              <span id="eagleTaskStatus" class="muted">Idle</span>
+              <strong id="eaglePercent">0%</strong>
+            </div>
+            <div class="progress eagle-progress"><span id="eagleProgress"></span></div>
+            <div id="eagleProgressDetail" class="muted">0/0</div>
+            <div id="eagleTaskStats" class="task-stats">
+              <span>成功 0</span><span>失败 0</span><span>跳过 0</span>
+            </div>
+            <div id="eagleTaskErrors" class="task-errors"></div>
+            <div id="eagleIndexStatus" class="muted">Index: not built</div>
+          </div>
+        </section>
+
+        <section class="panel diagnostics-panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">环境诊断</div>
+              <div id="diagnosticsSummary" class="muted">还没有运行诊断</div>
+            </div>
+            <button id="runDiagnosticsBtn" class="btn ghost">运行</button>
+          </div>
+          <div id="diagnosticsList" class="diagnostics-list">
+            <div class="muted">检查 FFmpeg、下载目录、Eagle API 和本地写入权限。</div>
+          </div>
+        </section>
+
+        <section class="panel settings-panel">
+          <div class="eyebrow">路径设置</div>
+          <label class="field-label">程序数据目录（改动后重启生效）</label>
+          <div class="path-row"><input id="settingDataDir" class="input" /><button id="pickDataDir" class="btn ghost">选择</button></div>
+          <label class="field-label">默认下载目录</label>
+          <div class="path-row"><input id="settingDownloadDir" class="input" /><button id="pickDownloadDir" class="btn ghost">选择</button></div>
+          <label class="field-label">FFmpeg</label>
+          <div class="path-row"><input id="settingFfmpegPath" class="input" /><button id="pickFfmpegPath" class="btn ghost">选择</button></div>
+          <label class="field-label">FFprobe</label>
+          <div class="path-row"><input id="settingFfprobePath" class="input" /><button id="pickFfprobePath" class="btn ghost">选择</button></div>
+          <label class="field-label">Aria2</label>
+          <div class="path-row"><input id="settingAria2Path" class="input" /><button id="pickAria2Path" class="btn ghost">选择</button></div>
+          <label class="field-label">Eagle 导出/缓存目录</label>
+          <div class="path-row"><input id="settingEagleExportDir" class="input" /><button id="pickEagleExportDir" class="btn ghost">选择</button></div>
+          <label class="field-label">错误日志文件</label>
+          <div class="path-row"><input id="settingErrorLogPath" class="input" /><button id="pickErrorLogPath" class="btn ghost">选择</button></div>
+          <button id="saveSettingsBtn" class="btn primary full">保存路径设置</button>
+        </section>
+
+        <section class="panel logs">
+          <div class="eyebrow">运行日志</div>
+          <div id="logs"></div>
+        </section>
+      </aside>
+    </div>
+
+    <div id="modal" class="modal hidden">
+      <div class="modal-card glass">
+        <button id="modalClose" class="modal-close">×</button>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
