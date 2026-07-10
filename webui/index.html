@@ -112,6 +112,19 @@
           <div id="monthChart" class="month-chart"></div>
         </section>
 
+        <section class="panel diagnostics-panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">环境诊断</div>
+              <div id="diagnosticsSummary" class="muted">还没有运行诊断</div>
+            </div>
+            <button id="runDiagnosticsBtn" class="btn ghost">运行</button>
+          </div>
+          <div id="diagnosticsList" class="diagnostics-list">
+            <div class="muted">检查 FFmpeg、下载目录、Eagle API 和本地写入权限。</div>
+          </div>
+        </section>
+
         <section class="panel download-panel">
           <div class="eyebrow">下载</div>
           <input id="saveDir" class="input" placeholder="保存目录" />
@@ -180,31 +193,18 @@
           </div>
         </section>
 
-        <section class="panel diagnostics-panel">
-          <div class="panel-head">
-            <div>
-              <div class="eyebrow">环境诊断</div>
-              <div id="diagnosticsSummary" class="muted">还没有运行诊断</div>
-            </div>
-            <button id="runDiagnosticsBtn" class="btn ghost">运行</button>
-          </div>
-          <div id="diagnosticsList" class="diagnostics-list">
-            <div class="muted">检查 FFmpeg、下载目录、Eagle API 和本地写入权限。</div>
-          </div>
-        </section>
-
         <section class="panel settings-panel">
           <div class="eyebrow">路径设置</div>
           <label class="field-label">程序数据目录（改动后重启生效）</label>
           <div class="path-row"><input id="settingDataDir" class="input" /><button id="pickDataDir" class="btn ghost">选择</button></div>
           <label class="field-label">默认下载目录</label>
-          <div class="path-row"><input id="settingDownloadDir" class="input" /><button id="pickDownloadDir" class="btn ghost">选择</button></div>
+          <div class="path-row"><input id="settingDownloadDir" class="input" placeholder="未设置时每次下载前选择" /><button id="pickDownloadDir" class="btn ghost">选择</button></div>
           <label class="field-label">FFmpeg</label>
-          <div class="path-row"><input id="settingFfmpegPath" class="input" /><button id="pickFfmpegPath" class="btn ghost">选择</button></div>
+          <div class="path-row"><input id="settingFfmpegPath" class="input" placeholder="留空使用内置或系统 FFmpeg" /><button id="pickFfmpegPath" class="btn ghost">选择</button></div>
           <label class="field-label">FFprobe</label>
-          <div class="path-row"><input id="settingFfprobePath" class="input" /><button id="pickFfprobePath" class="btn ghost">选择</button></div>
+          <div class="path-row"><input id="settingFfprobePath" class="input" placeholder="留空使用内置或系统 FFprobe" /><button id="pickFfprobePath" class="btn ghost">选择</button></div>
           <label class="field-label">Aria2</label>
-          <div class="path-row"><input id="settingAria2Path" class="input" /><button id="pickAria2Path" class="btn ghost">选择</button></div>
+          <div class="path-row"><input id="settingAria2Path" class="input" placeholder="留空自动使用内置或回退下载器" /><button id="pickAria2Path" class="btn ghost">选择</button></div>
           <label class="field-label">Eagle 导出/缓存目录</label>
           <div class="path-row"><input id="settingEagleExportDir" class="input" /><button id="pickEagleExportDir" class="btn ghost">选择</button></div>
           <label class="field-label">错误日志文件</label>
