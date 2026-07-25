@@ -34,3 +34,4 @@ dist/
 .claude/
 source_backup_*/
 *_before_*.py
+venv/*

@@ -100,7 +100,7 @@ class App(ctk.CTk):
         self.group_mode = ctk.BooleanVar(value=True)
         self.show_undone_only = ctk.BooleanVar(value=False)
         self.audio_only_mode = ctk.BooleanVar(value=False)
-        self.dl_all_parts = ctk.BooleanVar(value=False)
+        self.dl_all_parts = ctk.BooleanVar(value=True)
 
         self.check_env_tools()
         self.setup_ui()
@@ -293,24 +293,102 @@ class App(ctk.CTk):
         self.pb_file.grid(row=2, column=0, sticky="ew")
         self.lbl_status_text = ctk.CTkLabel(progress_box, text="Ready", font=("Consolas", 10), anchor="w")
         self.lbl_status_text.grid(row=3, column=0, sticky="ew", pady=(4, 0))
+        self.parallel_progress_frame = ctk.CTkFrame(progress_box, fg_color="transparent")
+        self.parallel_progress_frame.grid(row=2, column=0, rowspan=2, sticky="ew")
+        self.parallel_progress_frame.grid_remove()
+        self.parallel_progress_widgets = {}
+        self.parallel_progress_slots = []
 
         controls = ctk.CTkFrame(self.bottom_panel, fg_color="transparent")
         controls.grid(row=0, column=1, sticky="e", padx=20, pady=12)
-        self.audio_switch = ctk.CTkSwitch(controls, text="音频", variable=self.audio_only_mode)
+        self.audio_switch = ctk.CTkSwitch(controls, text="仅音频", variable=self.audio_only_mode)
         self.audio_switch.pack(side="left", padx=5)
-        self.parts_switch = ctk.CTkSwitch(controls, text="分P", variable=self.dl_all_parts)
+        self.parts_switch = ctk.CTkSwitch(controls, text="下载所有part", variable=self.dl_all_parts)
         self.parts_switch.pack(side="left", padx=5)
         self.quality_combo_dl = ctk.CTkComboBox(controls, values=["4K", "2K", "1080", "720", "480"], width=78)
         self.quality_combo_dl.set("1080")
         self.quality_combo_dl.pack(side="left", padx=5)
         self.speed_entry = ctk.CTkEntry(controls, width=72, placeholder_text="KB/s")
         self.speed_entry.pack(side="left", padx=5)
+        ctk.CTkLabel(controls, text="并行").pack(side="left", padx=(6, 0))
+        self.parallel_combo_dl = ctk.CTkComboBox(
+            controls, values=[str(value) for value in range(1, 9)], width=58
+        )
+        self.parallel_combo_dl.set("2")
+        self.parallel_combo_dl.pack(side="left", padx=5)
         self.btn_start = ctk.CTkButton(controls, text="启动", width=78, command=self.start_download)
         self.btn_start.pack(side="left", padx=5)
         self.btn_pause = ctk.CTkButton(controls, text="暂停", width=64, state="disabled", command=self.pause_task)
         self.btn_pause.pack(side="left", padx=5)
         self.btn_cancel = ctk.CTkButton(controls, text="停止", width=64, state="disabled", command=self.cancel_task)
         self.btn_cancel.pack(side="left", padx=5)
+
+    def set_parallel_progress_mode(self, enabled, slot_count=0):
+        for widgets in self.parallel_progress_slots:
+            widgets["row"].destroy()
+        self.parallel_progress_widgets.clear()
+        self.parallel_progress_slots.clear()
+        if enabled:
+            self.pb_file.grid_remove()
+            self.lbl_status_text.grid_remove()
+            self.parallel_progress_frame.grid()
+            for _ in range(max(1, int(slot_count or 1))):
+                self._create_parallel_progress_slot()
+        else:
+            self.parallel_progress_frame.grid_remove()
+            self.pb_file.grid()
+            self.lbl_status_text.grid()
+
+    def _create_parallel_progress_slot(self):
+        row = ctk.CTkFrame(self.parallel_progress_frame, fg_color="transparent")
+        row.pack(fill="x", pady=(0, 5))
+        header = ctk.CTkFrame(row, fg_color="transparent")
+        header.pack(fill="x")
+        label = ctk.CTkLabel(
+            header, text="等待任务", font=("Microsoft YaHei UI", 10), anchor="w"
+        )
+        label.pack(side="left", fill="x", expand=True)
+        detail = ctk.CTkLabel(header, text="0%", font=("Consolas", 9), anchor="e")
+        detail.pack(side="right")
+        bar = ctk.CTkProgressBar(row, height=5)
+        bar.set(0)
+        bar.pack(fill="x", pady=(2, 0))
+        widgets = {
+            "row": row,
+            "label": label,
+            "detail": detail,
+            "bar": bar,
+            "task_key": None,
+        }
+        self.parallel_progress_slots.append(widgets)
+        return widgets
+
+    def update_parallel_progress(self, task_key, title, percent, status, done=False):
+        key = str(task_key)
+        widgets = self.parallel_progress_widgets.get(key)
+        if done:
+            if widgets:
+                self.parallel_progress_widgets.pop(key, None)
+                widgets["task_key"] = None
+                widgets["label"].configure(text=f"{title} · {status}")
+                widgets["detail"].configure(text="100%")
+                widgets["bar"].set(1)
+            return
+
+        if widgets is None:
+            widgets = next(
+                (slot for slot in self.parallel_progress_slots if slot["task_key"] is None),
+                None,
+            )
+            if widgets is None:
+                widgets = self._create_parallel_progress_slot()
+            widgets["task_key"] = key
+            self.parallel_progress_widgets[key] = widgets
+
+        value = min(max(float(percent or 0), 0), 1)
+        widgets["label"].configure(text=f"{title} · {status}")
+        widgets["detail"].configure(text=f"{int(value * 100)}%")
+        widgets["bar"].set(value)
 
     def panel(self, parent):
         frame = ctk.CTkFrame(parent, corner_radius=8, fg_color=self.c("surface"), border_color=self.c("line"), border_width=1)
@@ -686,8 +764,13 @@ class App(ctk.CTk):
                 self.stats_canvas.create_text((x0 + x1) / 2, bottom - total_h - 10, text=f"{data['done']}/{data['total']}", fill=self.c("muted"), font=("Segoe UI", 8))
 
     def log(self, text):
+        try:
+            should_follow = float(self.log_box.yview()[1]) >= 0.999
+        except Exception:
+            should_follow = True
         self.log_box.insert("end", f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {text}\n")
-        self.log_box.see("end")
+        if should_follow:
+            self.log_box.see("end")
 
     def format_duration(self, seconds):
         if not seconds:
@@ -1079,8 +1162,13 @@ class App(ctk.CTk):
             messagebox.showerror("错误", f"二维码生成失败：{exc}")
 
     def import_data_folder(self):
-        src = filedialog.askdirectory()
-        if src and self.mgr.import_backup_files(src):
+        src = filedialog.askopenfilename(
+            title="选择备份数据文件",
+            filetypes=[("JSON 备份文件", "*.json"), ("所有文件", "*.*")],
+        )
+        if not src:
+            return
+        if self.mgr.import_backup_files(src):
             self.request_refresh(redraw_stats=True)
             messagebox.showinfo("OK", "导入成功")
 
@@ -1106,6 +1194,10 @@ class App(ctk.CTk):
         quality = self.quality_combo_dl.get()
         audio_only = self.audio_only_mode.get()
         dl_all = self.dl_all_parts.get()
+        try:
+            parallelism = max(1, min(8, int(self.parallel_combo_dl.get() or 2)))
+        except Exception:
+            parallelism = 2
         self.check_env_tools()
         if not self.env_ffmpeg and not audio_only and quality in ["4K", "2K", "1080", "720"]:
             messagebox.showerror("缺少组件", f"无法下载 {quality} 画质：未检测到 FFmpeg。")
@@ -1116,16 +1208,44 @@ class App(ctk.CTk):
         self.btn_cancel.configure(state="normal")
         self.pb_total.set(0)
         self.pb_file.set(0)
+        parallel_mode = parallelism > 1 and len(unique) > 1
+        self.set_parallel_progress_mode(
+            parallel_mode, min(parallelism, len(unique)) if parallel_mode else 0
+        )
 
-        def progress(percent, text, is_switch, current_idx=0, total_cnt=1):
+        _last_switch_text = None
+        _logged_parallel_titles = set()
+
+        def progress(
+            percent, text, is_switch, current_idx=0, total_cnt=1,
+            task_key=None, task_title=None, task_done=False,
+        ):
+            nonlocal _last_switch_text
             def _apply():
+                nonlocal _last_switch_text
                 if percent == -1:
                     self.on_finish()
                     return
+                if task_key is not None:
+                    self.update_parallel_progress(
+                        task_key, task_title or str(task_key), percent, text, task_done
+                    )
+                    return
                 if is_switch:
-                    self.lbl_total_progress.configure(text=f"Total: {min(current_idx + 1, total_cnt)}/{total_cnt} | {text}")
+                    completed_count = min(max(int(current_idx), 0), total_cnt)
+                    self.lbl_total_progress.configure(
+                        text=f"Total: {completed_count}/{total_cnt} | {text}"
+                    )
                     self.pb_total.set(min(max(percent, 0), 1))
-                    self.log(text if text.startswith("完成:") else f"开始：{text}")
+                    if text.startswith("并行 "):
+                        parallel_title = text.partition("|")[2].strip()
+                        if parallel_title and parallel_title not in _logged_parallel_titles:
+                            _logged_parallel_titles.add(parallel_title)
+                            self.log(f"开始：{text}")
+                        return
+                    if text != _last_switch_text:
+                        _last_switch_text = text
+                        self.log(text if text.startswith("完成:") else f"开始：{text}")
                 else:
                     self.pb_file.set(min(max(percent, 0), 1))
                     self.lbl_status_text.configure(text=text)
@@ -1141,23 +1261,27 @@ class App(ctk.CTk):
         def log_proxy(message):
             self.after(0, lambda message=message: self.log(message))
 
-        self.worker = DownloadWorker(unique, save_dir, speed, quality, progress, history_cb, fail_cb, self.mgr.session, self.mgr.get_netscape_cookie_path, log_proxy, audio_only, dl_all)
+        self.worker = DownloadWorker(unique, save_dir, speed, quality, progress, history_cb, fail_cb, self.mgr.session, self.mgr.get_netscape_cookie_path, log_proxy, audio_only, dl_all, parallelism)
         threading.Thread(target=self.worker.run, daemon=True).start()
 
     def pause_task(self):
         if self.worker:
             self.worker.is_paused = not self.worker.is_paused
             self.btn_pause.configure(text="继续" if self.worker.is_paused else "暂停")
+            self.lbl_status_text.configure(
+                text="等待当前活动视频完成后暂停..." if self.worker.is_paused else "继续下载..."
+            )
 
     def cancel_task(self):
         if self.worker:
-            self.worker.is_cancelled = True
+            self.worker.cancel()
             self.btn_cancel.configure(state="disabled")
             self.lbl_status_text.configure(text="正在取消...")
 
     def on_finish(self):
         self.pb_total.set(1)
         self.pb_file.set(1)
+        self.set_parallel_progress_mode(False)
         self.lbl_total_progress.configure(text="任务完成")
         self.lbl_status_text.configure(text="Ready")
         self.mgr.save_data()

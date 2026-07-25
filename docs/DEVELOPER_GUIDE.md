@@ -55,10 +55,15 @@ BiliDownloader_0705/
 1. 前端提交选中的 BV 和下载设置。
 2. `web_app.py` 汇总当前收藏夹/手动列表中的视频元数据。
 3. 创建 `DownloadWorker`。
-4. `worker.py` 使用 yt-dlp 下载视频。
-5. 如果使用外部 Aria2 失败，会自动禁用 Aria2 并回退。
-6. 下载成功后调用 `record_download`，写入 `download_records.json` 和历史记录。
-7. 异步缓存弹幕 XML，供后续套图抽帧使用。
+4. `worker.py` 优先让 FFmpeg直接读取音视频流并在下载过程中完成封装；分 P 播放地址在当前 P 开始前按 CID 延迟解析。
+5. 可在视频级启用 1–8 个并行 worker；各 worker共享 API 请求锁、请求间隔和风控冷却，但 FFmpeg下载与封装可并行执行。
+6. 视频和分 P之间加入随机间隔；API 返回 412/429 时使用带随机抖动的指数退避。
+7. 流式处理刷新直链重试后仍失败时，回退到 yt-dlp 内置下载器和旧式合并流程。
+8. Windows 下载子进程统一隐藏窗口；流式任务可立即取消，暂停会等待当前活动视频完成后阻止新任务启动。
+9. 下载成功后调用 `record_download`，写入 `download_records.json` 和历史记录。
+10. 异步缓存弹幕 XML，供后续套图抽帧使用。
+
+性能诊断统一由 `DownloadWorker._perf_log` 输出 `[PERF]` 结构化文本，并追加到错误日志同目录的 `performance_log.txt`。日志不记录播放 URL、Cookie或请求头；并行子 worker共享 session id和分类耗时计数器，任务结束输出 `bottleneck_summary`。
 
 ## 5. Eagle 套图流程
 

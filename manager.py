@@ -84,27 +84,45 @@ class BiliManager:
         self.init_paths()
         self.history = set()
 
-    def import_backup_files(self, src_dir):
+    def import_backup_files(self, src_path):
+        """导入备份数据，支持文件路径或目录路径，文件名支持前缀匹配"""
         count = 0
+        # 如果传入的是文件，直接根据文件名判断类型并导入
+        if os.path.isfile(src_path):
+            fname = os.path.basename(src_path).lower()
+            for key, prefixes in [("history", ["bili_history", "history"]), ("cookie", ["bili_cookies", "cookies"])]:
+                if any(fname.startswith(p) and fname.endswith(".json") for p in prefixes):
+                    try:
+                        with open(src_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                        if key == "history":
+                            self.history = self.history | set(data)
+                        else:
+                            self.session.cookies.update(data)
+                        self.save_data()
+                        count += 1
+                        break
+                    except Exception:
+                        pass
+            return count > 0
+        # 如果传入的是目录，遍历查找匹配文件
+        src_dir = src_path
         files_in_src = os.listdir(src_dir)
-        for fname in BACKUP_FILENAMES["history"]:
-            if fname in files_in_src:
-                src_path = os.path.join(src_dir, fname)
-                try:
-                    with open(src_path, 'r', encoding='utf-8') as f: old_data = set(json.load(f))
-                    self.history = self.history | old_data
-                    self.save_data()
-                    count += 1
-                    break 
-                except: pass
-        for fname in BACKUP_FILENAMES["cookie"]:
-            if fname in files_in_src:
-                src_path = os.path.join(src_dir, fname)
-                try:
-                    with open(src_path, 'r', encoding='utf-8') as f: cookies = json.load(f)
-                    self.session.cookies.update(cookies)
-                    self.save_data()
-                    count += 1
+        for fname in files_in_src:
+            fname_lower = fname.lower()
+            for key, prefixes in [("history", ["bili_history", "history"]), ("cookie", ["bili_cookies", "cookies"])]:
+                if any(fname_lower.startswith(p) and fname_lower.endswith(".json") for p in prefixes):
+                    full_path = os.path.join(src_dir, fname)
+                    try:
+                        with open(full_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                        if key == "history":
+                            self.history = self.history | set(data)
+                        else:
+                            self.session.cookies.update(data)
+                        self.save_data()
+                        count += 1
+                    except Exception:
+                        pass
                     break
-                except: pass
         return count > 0
